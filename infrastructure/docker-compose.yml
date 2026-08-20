@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: deltaworks-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: deltaworks
+      POSTGRES_USER: deltaworks
+      POSTGRES_PASSWORD: deltaworks_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
