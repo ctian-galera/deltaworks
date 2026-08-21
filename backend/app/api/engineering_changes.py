@@ -65,6 +65,9 @@ def create_change(
     return create_engineering_change(db, data)
 
 
+
+
+
 # helper
 def get_change_or_404(
     change_id: int,
@@ -80,6 +83,20 @@ def get_change_or_404(
 
     return change
 
+
+@router.get(
+    "/{change_id}",
+    response_model=EngineeringChangeRead,
+)
+def get_change(
+    change_id: int,
+    db: Session = Depends(get_db),
+):
+    return get_change_or_404(
+        change_id,
+        db,
+    )
+    
 
 @router.post(
     "/{change_id}/submit",
