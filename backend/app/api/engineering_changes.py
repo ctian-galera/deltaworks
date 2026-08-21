@@ -27,6 +27,7 @@ from app.schemas.change_action import (
 )
 
 from app.services.change_action import (
+    ChangeActionScopeLockedError,
     create_change_action,
     get_change_actions,
 )
@@ -160,13 +161,23 @@ def create_engineering_change_action(
     data: ChangeActionCreate,
     db: Session = Depends(get_db),
 ):
-    get_change_or_404(engineering_change_id, db)
-
-    return create_change_action(
-        db,
+    get_change_or_404(
         engineering_change_id,
-        data,
+        db,
     )
+
+    try:
+        return create_change_action(
+            db,
+            engineering_change_id,
+            data,
+        )
+    except ChangeActionScopeLockedError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=str(exc),
+        ) from exc
+
 
 
 @router.get(
