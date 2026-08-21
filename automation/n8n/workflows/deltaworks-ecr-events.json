@@ -1,0 +1,130 @@
+{
+  "name": "DeltaWorks — ECR Status Events",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "deltaworks/ecr-events",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -272,
+        -96
+      ],
+      "id": "752b86f4-2156-4206-b2c9-7fd2a6858240",
+      "name": "Webhook",
+      "webhookId": "b01c9d32-1b3c-4bec-96e6-d15dad278aa5"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"id\": \"{{$json.id}}\",\n  \"change_number\": \"{{$json.change_number}}\",\n  \"title\": \"{{$json.title}}\",\n  \"status\": \"{{$json.status}}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        400,
+        -96
+      ],
+      "id": "2336f667-5673-4ab9-9622-4ca6047a51ab",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4439f734-b26e-4ecd-b0bc-26811f986604",
+              "name": "message",
+              "value": "=ECR {{$json.body.change_number}} changed to {{$json.body.new_status}}",
+              "type": "string"
+            },
+            {
+              "id": "32dd0ce2-4be7-4e7a-8cb0-d0fed1153083",
+              "name": "event_type",
+              "value": "={{$json.body.event}}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -32,
+        -96
+      ],
+      "id": "e461ef50-a41d-493a-b519-5c555141bd8d",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "url": "=http://host.docker.internal:8000/api/v1/engineering-changes/{{$json.body.change_id}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        192,
+        -96
+      ],
+      "id": "3c90877e-21af-41db-82bf-2efa452c5c60",
+      "name": "HTTP Request"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "dcf74b56-2ab6-4d07-91c3-fca902a87a98",
+  "meta": {
+    "instanceId": "c2053f22f09f44a13e65cf76d48ef166848c7b430b12fedaf142ee39f7acf430"
+  },
+  "nodeGroups": [],
+  "id": "rYH3mNC4v5SA8gf3",
+  "tags": []
+}
