@@ -27,7 +27,7 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
-        400,
+        624,
         -96
       ],
       "id": "2336f667-5673-4ab9-9622-4ca6047a51ab",
@@ -76,6 +76,20 @@
       ],
       "id": "3c90877e-21af-41db-82bf-2efa452c5c60",
       "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "url": "=http://host.docker.internal:8000/api/v1/engineering-changes/{{$json.id}}/risks",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        416,
+        -96
+      ],
+      "id": "9b0532e8-181a-4491-98e0-c3b706b25460",
+      "name": "HTTP Request1"
     }
   ],
   "pinData": {},
@@ -106,6 +120,17 @@
       "main": [
         [
           {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
             "node": "Respond to Webhook",
             "type": "main",
             "index": 0
@@ -120,7 +145,7 @@
     "binaryMode": "separate",
     "availableInMCP": false
   },
-  "versionId": "dcf74b56-2ab6-4d07-91c3-fca902a87a98",
+  "versionId": "216ebf3c-7af2-4b1d-b137-2e57e3dc62b8",
   "meta": {
     "instanceId": "c2053f22f09f44a13e65cf76d48ef166848c7b430b12fedaf142ee39f7acf430"
   },
