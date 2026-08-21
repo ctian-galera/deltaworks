@@ -34,6 +34,13 @@ from app.risk.service import (
 from app.schemas.risk import RiskFindingResponse
 
 
+from app.policy.service import (
+    generate_approval_requirements,
+    get_change_approvals,
+)
+from app.schemas.approval_requirement import ApprovalRequirementResponse
+
+
 router = APIRouter(
     prefix="/engineering-changes",
     tags=["Engineering Changes"],
@@ -131,20 +138,6 @@ def evaluate_engineering_change(
     )
 
 
-@router.get(
-    "/{engineering_change_id}/risks",
-    response_model=list[RiskFindingResponse],
-)
-def get_engineering_change_risks(
-    engineering_change_id: int,
-    db: Session = Depends(get_db),
-):
-    return get_change_risks(
-        db,
-        engineering_change_id,
-    )
-    
-
 @router.post(
     "/{engineering_change_id}/actions",
     response_model=ChangeActionResponse,
@@ -175,6 +168,55 @@ def get_engineering_change_actions(
     get_change_or_404(engineering_change_id, db)
 
     return get_change_actions(
+        db,
+        engineering_change_id,
+    )
+    
+    
+
+
+
+@router.get(
+    "/{engineering_change_id}/risks",
+    response_model=list[RiskFindingResponse],
+)
+def get_engineering_change_risks(
+    engineering_change_id: int,
+    db: Session = Depends(get_db),
+):
+    return get_change_risks(
+        db,
+        engineering_change_id,
+    )
+    
+    
+@router.post(
+    "/{engineering_change_id}/approvals/generate",
+    response_model=list[ApprovalRequirementResponse],
+)
+def generate_engineering_change_approvals(
+    engineering_change_id: int,
+    db: Session = Depends(get_db),
+):
+    get_change_or_404(engineering_change_id, db)
+
+    return generate_approval_requirements(
+        db,
+        engineering_change_id,
+    )
+
+
+@router.get(
+    "/{engineering_change_id}/approvals",
+    response_model=list[ApprovalRequirementResponse],
+)
+def get_engineering_change_approvals(
+    engineering_change_id: int,
+    db: Session = Depends(get_db),
+):
+    get_change_or_404(engineering_change_id, db)
+
+    return get_change_approvals(
         db,
         engineering_change_id,
     )
