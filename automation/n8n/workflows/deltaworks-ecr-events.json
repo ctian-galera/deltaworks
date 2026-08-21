@@ -27,7 +27,7 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
-        1136,
+        1904,
         -96
       ],
       "id": "2336f667-5673-4ab9-9622-4ca6047a51ab",
@@ -85,8 +85,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [
-        416,
-        -96
+        528,
+        32
       ],
       "id": "9b0532e8-181a-4491-98e0-c3b706b25460",
       "name": "Get Risks"
@@ -98,8 +98,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        912,
-        -96
+        1024,
+        -112
       ],
       "id": "03e5a22c-4643-446d-ac2d-b531b7170868",
       "name": "Build Engineering Context"
@@ -112,11 +112,74 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [
-        640,
-        -96
+        528,
+        -224
       ],
       "id": "cb3a7305-5c09-4806-b6d1-f91b4c4ee1b2",
       "name": "Get Approvals"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        112
+      ],
+      "id": "948be1dc-7f49-4d14-bd86-4f98d1fb2d87",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "yh4TbgXzeQceCsKv",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an engineering change management assistant.  Analyze the engineering change context provided below.  Your job is to produce a concise engineering review containing:  1. Engineering change summary 2. Critical risks 3. Warning risks 4. Required approvals and their current status 5. Reviewer attention / recommended next action  Use ONLY the information provided in the engineering change context. Do not invent risks, approvals, statuses, or technical facts.  Engineering Change Context: {{ JSON.stringify($json) }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": []
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1248,
+        -112
+      ],
+      "id": "ed7feb85-44e0-4324-bfe4-a9b4fcae03d3",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"engineering_change_summary\": {\n      \"type\": \"object\",\n      \"properties\": {\n        \"change_number\": {\n          \"type\": \"string\"\n        },\n        \"title\": {\n          \"type\": \"string\"\n        },\n        \"status\": {\n          \"type\": \"string\"\n        },\n        \"description\": {\n          \"type\": \"string\"\n        }\n      },\n      \"required\": [\n        \"change_number\",\n        \"title\",\n        \"status\",\n        \"description\"\n      ]\n    },\n    \"critical_risks\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"category\": {\n            \"type\": \"string\"\n          },\n          \"severity\": {\n            \"type\": \"string\"\n          },\n          \"reason\": {\n            \"type\": \"string\"\n          }\n        },\n        \"required\": [\n          \"category\",\n          \"severity\",\n          \"reason\"\n        ]\n      }\n    },\n    \"warning_risks\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"category\": {\n            \"type\": \"string\"\n          },\n          \"severity\": {\n            \"type\": \"string\"\n          },\n          \"reason\": {\n            \"type\": \"string\"\n          }\n        },\n        \"required\": [\n          \"category\",\n          \"severity\",\n          \"reason\"\n        ]\n      }\n    },\n    \"required_approvals\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"role\": {\n            \"type\": \"string\"\n          },\n          \"status\": {\n            \"type\": \"string\"\n          }\n        },\n        \"required\": [\n          \"role\",\n          \"status\"\n        ]\n      }\n    },\n    \"reviewer_attention\": {\n      \"type\": \"string\"\n    }\n  },\n  \"required\": [\n    \"engineering_change_summary\",\n    \"critical_risks\",\n    \"warning_risks\",\n    \"required_approvals\",\n    \"reviewer_attention\"\n  ]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1456,
+        112
+      ],
+      "id": "560c7447-6f86-431d-8147-55728d5b3f68",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        832,
+        -112
+      ],
+      "id": "3fbfda41-e7db-4c68-9125-c78677acdf5e",
+      "name": "Merge"
     }
   ],
   "pinData": {},
@@ -147,6 +210,11 @@
       "main": [
         [
           {
+            "node": "Get Approvals",
+            "type": "main",
+            "index": 0
+          },
+          {
             "node": "Get Risks",
             "type": "main",
             "index": 0
@@ -158,14 +226,47 @@
       "main": [
         [
           {
-            "node": "Get Approvals",
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Build Engineering Context": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Build Engineering Context": {
+    "Get Approvals": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
       "main": [
         [
           {
@@ -176,7 +277,18 @@
         ]
       ]
     },
-    "Get Approvals": {
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
       "main": [
         [
           {
@@ -194,8 +306,9 @@
     "binaryMode": "separate",
     "availableInMCP": false
   },
-  "versionId": "511b8d97-c05e-4e59-a3d1-1f20e1c8daf9",
+  "versionId": "1f2aefc7-f9dc-4968-8473-265d4c63f8a4",
   "meta": {
+    "templateCredsSetupCompleted": true,
     "instanceId": "c2053f22f09f44a13e65cf76d48ef166848c7b430b12fedaf142ee39f7acf430"
   },
   "nodeGroups": [],
