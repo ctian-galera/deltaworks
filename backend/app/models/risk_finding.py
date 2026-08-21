@@ -1,9 +1,9 @@
-import uuid
 from datetime import datetime, timezone
 from enum import Enum
+from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, Enum as SQLEnum, ForeignKey, String, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import DateTime, Enum as SQLEnum, ForeignKey, Text
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -25,10 +25,10 @@ class RiskSeverity(str, Enum):
 class RiskFinding(Base):
     __tablename__ = "risk_findings"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+    id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
         primary_key=True,
-        default=uuid.uuid4,
+        default=uuid4,
     )
 
     engineering_change_id: Mapped[int] = mapped_column(
@@ -37,7 +37,7 @@ class RiskFinding(Base):
         index=True,
     )
 
-    node_id: Mapped[uuid.UUID] = mapped_column(
+    node_id: Mapped[UUID] = mapped_column(
         ForeignKey("context_nodes.id"),
         nullable=False,
         index=True,

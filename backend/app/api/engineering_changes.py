@@ -18,6 +18,21 @@ from app.services.engineering_change import (
 from app.workflows.engineering_change import (
     InvalidChangeTransition,
 )
+from app.schemas.change_action import (
+    ChangeActionCreate,
+    ChangeActionResponse,
+)
+
+from app.services.change_action import (
+    create_change_action,
+    get_change_actions,
+)
+from app.risk.service import (
+    evaluate_and_persist_change,
+    get_change_risks,
+)
+from app.schemas.risk import RiskFindingResponse
+
 
 router = APIRouter(
     prefix="/engineering-changes",
@@ -100,3 +115,66 @@ def transition_change(
             status_code=409,
             detail=str(exc),
         ) from exc
+        
+
+@router.post(
+    "/{engineering_change_id}/evaluate",
+    response_model=list[RiskFindingResponse],
+)
+def evaluate_engineering_change(
+    engineering_change_id: int,
+    db: Session = Depends(get_db),
+):
+    return evaluate_and_persist_change(
+        db,
+        engineering_change_id,
+    )
+
+
+@router.get(
+    "/{engineering_change_id}/risks",
+    response_model=list[RiskFindingResponse],
+)
+def get_engineering_change_risks(
+    engineering_change_id: int,
+    db: Session = Depends(get_db),
+):
+    return get_change_risks(
+        db,
+        engineering_change_id,
+    )
+    
+
+@router.post(
+    "/{engineering_change_id}/actions",
+    response_model=ChangeActionResponse,
+    status_code=201,
+)
+def create_engineering_change_action(
+    engineering_change_id: int,
+    data: ChangeActionCreate,
+    db: Session = Depends(get_db),
+):
+    get_change_or_404(engineering_change_id, db)
+
+    return create_change_action(
+        db,
+        engineering_change_id,
+        data,
+    )
+
+
+@router.get(
+    "/{engineering_change_id}/actions",
+    response_model=list[ChangeActionResponse],
+)
+def get_engineering_change_actions(
+    engineering_change_id: int,
+    db: Session = Depends(get_db),
+):
+    get_change_or_404(engineering_change_id, db)
+
+    return get_change_actions(
+        db,
+        engineering_change_id,
+    )
