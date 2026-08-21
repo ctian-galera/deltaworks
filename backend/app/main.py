@@ -1,9 +1,17 @@
 from fastapi import FastAPI
 
+from app.api.engineering_changes import router as engineering_changes_router
+
+
 app = FastAPI(
     title="DeltaWorks",
-    description="Industrial Engineering Change & Decision Automation Platform",
     version="0.1.0",
+)
+
+
+app.include_router(
+    engineering_changes_router,
+    prefix="/api/v1",
 )
 
 
