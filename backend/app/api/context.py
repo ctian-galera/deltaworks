@@ -1,6 +1,7 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -9,12 +10,14 @@ from app.schemas.context import (
     ContextEdgeResponse,
     ContextNodeCreate,
     ContextNodeResponse,
+    ImpactAnalysisResponse
 )
 from app.services.context import (
     create_edge,
     create_node,
     get_node,
     get_node_edges,
+    get_impact
 )
 
 router = APIRouter(
@@ -81,3 +84,39 @@ def read_context_node_edges(
         )
 
     return get_node_edges(db, node_id)
+
+
+@router.get(
+    "/nodes/{node_id}/impact",
+    response_model=ImpactAnalysisResponse,
+)
+def get_node_impact(
+    node_id: UUID,
+    max_depth: int = Query(default=3, ge=1, le=10),
+    db: Session = Depends(get_db),
+):
+    impact = get_impact(
+        db=db,
+        node_id=node_id,
+        max_depth=max_depth,
+    )
+
+    if not impact:
+        node_exists = db.execute(
+            text(
+                "SELECT 1 FROM context_nodes WHERE id = :node_id"
+            ),
+            {"node_id": node_id},
+        ).first()
+
+        if not node_exists:
+            raise HTTPException(
+                status_code=404,
+                detail="Context node not found",
+            )
+
+    return {
+        "root_node_id": node_id,
+        "max_depth": max_depth,
+        "impacted_nodes": impact,
+    }

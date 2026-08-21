@@ -56,3 +56,17 @@ class ContextEdgeResponse(BaseModel):
         serialization_alias="metadata",
     )
     created_at: datetime
+    
+
+class ImpactNodeResponse(BaseModel):
+    node_id: UUID
+    identifier: str
+    name: str
+    relationship_type: str
+    depth: int
+
+
+class ImpactAnalysisResponse(BaseModel):
+    root_node_id: UUID
+    max_depth: int
+    impacted_nodes: list[ImpactNodeResponse]
