@@ -12,6 +12,7 @@ from app.schemas.engineering_change import (
     EngineeringChangeTransition
 )
 from app.services.engineering_change import (
+    ApprovalRequiredError,
     create_engineering_change,
     transition_engineering_change,
 )
@@ -117,6 +118,13 @@ def transition_change(
             actor=data.actor,
             reason=data.reason,
         )
+
+    except ApprovalRequiredError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=str(exc),
+        ) from exc
+
     except InvalidChangeTransition as exc:
         raise HTTPException(
             status_code=409,

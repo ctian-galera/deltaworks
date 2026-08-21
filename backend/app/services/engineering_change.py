@@ -1,9 +1,21 @@
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models.engineering_change import ChangeStatus, EngineeringChange
+from app.models.approval_requirement import (
+    ApprovalRequirement,
+    ApprovalStatus,
+)
+from app.models.engineering_change import (
+    ChangeStatus,
+    EngineeringChange,
+)
 from app.schemas.engineering_change import EngineeringChangeCreate
 from app.workflows.engineering_change import transition
 from app.services.audit import record_audit_event
+
+
+class ApprovalRequiredError(Exception):
+    pass
 
 
 def create_engineering_change(
@@ -35,6 +47,24 @@ def transition_engineering_change(
     actor: str = "system",
     reason: str | None = None,
 ) -> EngineeringChange:
+
+    if (
+        change.status == ChangeStatus.UNDER_REVIEW
+        and target_status == ChangeStatus.APPROVED
+    ):
+        pending_approvals = db.scalars(
+            select(ApprovalRequirement).where(
+                ApprovalRequirement.engineering_change_id == change.id,
+                ApprovalRequirement.status == ApprovalStatus.PENDING,
+            )
+        ).all()
+
+        if pending_approvals:
+            raise ApprovalRequiredError(
+                "Engineering change cannot be approved while "
+                "required approvals are still pending."
+            )
+
     previous_status = change.status
 
     change.status = transition(
