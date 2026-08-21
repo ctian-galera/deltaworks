@@ -12,6 +12,8 @@ from app.models.engineering_change import (
 from app.schemas.engineering_change import EngineeringChangeCreate
 from app.workflows.engineering_change import transition
 from app.services.audit import record_audit_event
+from app.events.engineering_change import build_status_changed_event
+from app.events.publisher import publish_event
 
 
 class ApprovalRequiredError(Exception):
@@ -84,5 +86,14 @@ def transition_engineering_change(
 
     db.commit()
     db.refresh(change)
+
+    publish_event(
+        build_status_changed_event(
+            change_id=change.id,
+            change_number=change.change_number,
+            previous_status=previous_status,
+            new_status=target_status,
+        )
+    )
 
     return change
