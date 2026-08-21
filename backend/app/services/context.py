@@ -71,52 +71,83 @@ def get_impact(
 ):
     query = text(
         """
-        WITH RECURSIVE impact AS (
+        WITH RECURSIVE impact_tree AS (
             SELECT
-                cn.id AS node_id,
-                cn.identifier,
-                cn.name,
-                NULL::text AS relationship_type,
+                id AS node_id,
                 0 AS depth,
-                ARRAY[cn.id] AS path
-            FROM context_nodes cn
-            WHERE cn.id = :node_id
+                NULL::text AS relationship_type,
+                ARRAY[id] AS path
+            FROM context_nodes
+            WHERE id = :root_node_id
 
             UNION ALL
 
             SELECT
-                parent.id AS node_id,
-                parent.identifier,
-                parent.name,
-                ce.relationship_type::text AS relationship_type,
-                i.depth + 1 AS depth,
-                i.path || parent.id
-            FROM impact i
-            JOIN context_edges ce
-                ON ce.child_id = i.node_id
-            JOIN context_nodes parent
-                ON parent.id = ce.parent_id
-            WHERE i.depth < :max_depth
-              AND NOT parent.id = ANY(i.path)
+                CASE
+                    WHEN e.parent_id = it.node_id
+                    THEN e.child_id
+                    ELSE e.parent_id
+                END AS node_id,
+
+                it.depth + 1 AS depth,
+
+                e.relationship_type::text AS relationship_type,
+
+                it.path ||
+                CASE
+                    WHEN e.parent_id = it.node_id
+                    THEN e.child_id
+                    ELSE e.parent_id
+                END AS path
+
+            FROM impact_tree it
+            JOIN context_edges e
+                ON e.parent_id = it.node_id
+                OR e.child_id = it.node_id
+
+            WHERE it.depth < :max_depth
+
+              AND NOT (
+                  CASE
+                      WHEN e.parent_id = it.node_id
+                      THEN e.child_id
+                      ELSE e.parent_id
+                  END = ANY(it.path)
+              )
         )
+
         SELECT
-            node_id,
-            identifier,
-            name,
-            relationship_type,
-            depth
-        FROM impact
-        WHERE depth > 0
-        ORDER BY depth, identifier
+            n.id AS node_id,
+            n.identifier,
+            n.name,
+            it.relationship_type,
+            it.depth
+
+        FROM impact_tree it
+        JOIN context_nodes n
+            ON n.id = it.node_id
+
+        WHERE it.depth > 0
+
+        ORDER BY it.depth, n.identifier
         """
     )
 
     result = db.execute(
         query,
         {
-            "node_id": node_id,
+            "root_node_id": node_id,
             "max_depth": max_depth,
         },
     )
 
-    return result.mappings().all()
+    return [
+        {
+            "node_id": row.node_id,
+            "identifier": row.identifier,
+            "name": row.name,
+            "relationship_type": row.relationship_type,
+            "depth": row.depth,
+        }
+        for row in result
+    ]

@@ -17,8 +17,9 @@ from app.services.context import (
     create_node,
     get_node,
     get_node_edges,
-    get_impact
+    get_impact,
 )
+from app.services.impact import assess_impact
 
 router = APIRouter(
     prefix="/context",
@@ -120,3 +121,16 @@ def get_node_impact(
         "max_depth": max_depth,
         "impacted_nodes": impact,
     }
+    
+
+@router.get("/nodes/{node_id}/impact")
+def get_node_impact(
+    node_id: UUID,
+    max_depth: int = 3,
+    db: Session = Depends(get_db),
+):
+    return assess_impact(
+        db,
+        root_node_id=node_id,
+        max_depth=max_depth,
+    )
