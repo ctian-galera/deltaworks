@@ -45,6 +45,15 @@ from app.schemas.approval_requirement import (
     ApprovalRequirementResponse,
     ApprovalRequirementDecision,
 )
+from app.schemas.engineering_change_bundle import EngineeringChangeBundleResponse
+from app.schemas.engineering_context_report import (
+    EngineeringContextReportCreate,
+    EngineeringContextReportResponse,
+)
+from app.services.engineering_context_report import (
+    create_context_report,
+    get_context_reports,
+)
 
 
 router = APIRouter(
@@ -287,3 +296,63 @@ def decide_engineering_change_approval(
             status_code=409,
             detail=str(exc),
         ) from exc
+        
+        
+@router.get(
+    "/{engineering_change_id}/context-bundle",
+    response_model=EngineeringChangeBundleResponse,
+)
+def get_engineering_change_context_bundle(
+    engineering_change_id: int,
+    db: Session = Depends(get_db),
+):
+    change = get_change_or_404(
+        engineering_change_id,
+        db,
+    )
+
+    return {
+        "ecr": change,
+        "risks": get_change_risks(db, engineering_change_id),
+        "approvals": get_change_approvals(db, engineering_change_id),
+    }
+    
+@router.post(
+    "/{engineering_change_id}/context-reports",
+    response_model=EngineeringContextReportResponse,
+    status_code=201,
+)
+def create_engineering_context_report(
+    engineering_change_id: int,
+    data: EngineeringContextReportCreate,
+    db: Session = Depends(get_db),
+):
+    get_change_or_404(
+        engineering_change_id,
+        db,
+    )
+
+    return create_context_report(
+        db,
+        engineering_change_id,
+        data,
+    )
+    
+    
+@router.get(
+    "/{engineering_change_id}/context-reports",
+    response_model=list[EngineeringContextReportResponse],
+)
+def get_engineering_context_reports(
+    engineering_change_id: int,
+    db: Session = Depends(get_db),
+):
+    get_change_or_404(
+        engineering_change_id,
+        db,
+    )
+
+    return get_context_reports(
+        db,
+        engineering_change_id,
+    )

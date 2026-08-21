@@ -8,12 +8,12 @@ from app.models.risk_finding import (
     RiskFinding,
     RiskSeverity,
 )
-
 from app.models.approval_requirement import (
     ApprovalRequirement,
     ApprovalRole,
     ApprovalStatus,
 )
+from app.models.engineering_context_report import EngineeringContextReport
 
 __all__ = [
     "EngineeringChange", "AuditEvent", 
@@ -22,4 +22,5 @@ __all__ = [
     "ChangeAction", "ChangeActionType",
     "RiskCategory", "RiskFinding", "RiskSeverity",
     "ApprovalRequirement", "ApprovalRole", "ApprovalStatus",
+    "EngineeringContextReport"
 ]
