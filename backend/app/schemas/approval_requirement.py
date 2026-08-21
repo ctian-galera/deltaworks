@@ -19,3 +19,8 @@ class ApprovalRequirementResponse(BaseModel):
     actor: str | None
     acted_at: datetime | None
     created_at: datetime
+    
+    
+class ApprovalRequirementDecision(BaseModel):
+    status: ApprovalStatus
+    actor: str

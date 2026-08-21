@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -33,13 +35,15 @@ from app.risk.service import (
     get_change_risks,
 )
 from app.schemas.risk import RiskFindingResponse
-
-
 from app.policy.service import (
     generate_approval_requirements,
     get_change_approvals,
+    decide_approval,
 )
-from app.schemas.approval_requirement import ApprovalRequirementResponse
+from app.schemas.approval_requirement import (
+    ApprovalRequirementResponse,
+    ApprovalRequirementDecision,
+)
 
 
 router = APIRouter(
@@ -228,3 +232,30 @@ def get_engineering_change_approvals(
         db,
         engineering_change_id,
     )
+    
+
+@router.post(
+    "/{engineering_change_id}/approvals/{approval_id}/decision",
+    response_model=ApprovalRequirementResponse,
+)
+def decide_engineering_change_approval(
+    engineering_change_id: int,
+    approval_id: UUID,
+    data: ApprovalRequirementDecision,
+    db: Session = Depends(get_db),
+):
+    get_change_or_404(engineering_change_id, db)
+
+    try:
+        return decide_approval(
+            db,
+            engineering_change_id,
+            approval_id,
+            data.status,
+            data.actor,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=str(exc),
+        ) from exc

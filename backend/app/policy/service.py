@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
@@ -73,3 +75,35 @@ def get_change_approvals(
             .order_by(ApprovalRequirement.created_at)
         ).all()
     )
+    
+
+def decide_approval(
+    db: Session,
+    engineering_change_id: int,
+    approval_id,
+    status: ApprovalStatus,
+    actor: str,
+) -> ApprovalRequirement:
+    approval = db.get(ApprovalRequirement, approval_id)
+
+    if approval is None:
+        raise ValueError("Approval requirement not found.")
+
+    if approval.engineering_change_id != engineering_change_id:
+        raise ValueError(
+            "Approval requirement does not belong to this engineering change."
+        )
+
+    if approval.status != ApprovalStatus.PENDING:
+        raise ValueError(
+            "Approval requirement has already been decided."
+        )
+
+    approval.status = status
+    approval.actor = actor
+    approval.acted_at = datetime.now(timezone.utc)
+
+    db.commit()
+    db.refresh(approval)
+
+    return approval
