@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
 from app.api.engineering_changes import router as engineering_changes_router
+from app.api.context import router as context_router
 
 
 app = FastAPI(
@@ -11,6 +12,11 @@ app = FastAPI(
 
 app.include_router(
     engineering_changes_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    context_router,
     prefix="/api/v1",
 )
 
