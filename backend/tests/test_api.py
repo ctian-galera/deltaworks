@@ -354,3 +354,40 @@ def test_create_context_report_is_idempotent(client):
     assert len(reports) == 1
     assert reports[0]["id"] == first_data["id"]
     
+
+def test_get_context_bundle(client):
+    create_response = client.post(
+        "/api/v1/engineering-changes",
+        json={
+            "title": "Context bundle API test",
+            "description": "Testing context bundle retrieval.",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    change_id = create_response.json()["id"]
+
+    response = client.get(
+        f"/api/v1/engineering-changes/{change_id}/context-bundle"
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["ecr"]["id"] == change_id
+    assert data["ecr"]["title"] == "Context bundle API test"
+    assert "risks" in data
+    assert "approvals" in data
+    assert isinstance(data["risks"], list)
+    assert isinstance(data["approvals"], list)
+
+
+def test_get_context_bundle_not_found(client):
+    response = client.get(
+        "/api/v1/engineering-changes/999999/context-bundle"
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Engineering change not found"
