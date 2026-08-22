@@ -960,4 +960,161 @@ def test_transition_engineering_change_invalid_body(client):
 
     assert response.status_code == 422
     
+
+def test_create_context_report_for_nonexistent_change(client):
+    event_id = "33333333-3333-3333-3333-333333333333"
+
+    response = client.post(
+        "/api/v1/engineering-changes/999999/context-reports",
+        json={
+            "event_id": event_id,
+            "model": "test-model",
+            "prompt_version": "v1",
+            "input_context": {},
+            "report": {},
+        },
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Engineering change not found"
     
+
+def test_get_context_reports_for_nonexistent_change(client):
+    response = client.get(
+        "/api/v1/engineering-changes/999999/context-reports"
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Engineering change not found"
+    
+
+
+def test_get_context_report_invalid_event_id(client):
+    create_response = client.post(
+        "/api/v1/engineering-changes",
+        json={
+            "title": "Invalid event ID API test",
+            "description": "Testing UUID validation.",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    change_id = create_response.json()["id"]
+
+    response = client.get(
+        f"/api/v1/engineering-changes/{change_id}/context-reports/events/not-a-uuid"
+    )
+
+    assert response.status_code == 422
+    
+
+def test_create_engineering_change_missing_required_fields(client):
+    response = client.post(
+        "/api/v1/engineering-changes",
+        json={},
+    )
+
+    assert response.status_code == 422
+    
+
+def test_create_engineering_change_action_invalid_action(
+    client,
+    db_session,
+):
+    create_response = client.post(
+        "/api/v1/engineering-changes",
+        json={
+            "title": "Invalid action API test",
+            "description": "Testing action enum validation.",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    change_id = create_response.json()["id"]
+
+    node = ContextNode(
+        id=uuid4(),
+        site_id="TEST-SITE",
+        type=ContextNodeType.COMPONENT,
+        identifier="TEST-INVALID-ACTION",
+        name="Test Component",
+    )
+
+    db_session.add(node)
+    db_session.commit()
+    db_session.refresh(node)
+
+    response = client.post(
+        f"/api/v1/engineering-changes/{change_id}/actions",
+        json={
+            "node_id": str(node.id),
+            "action": "INVALID_ACTION",
+            "proposed_state": {},
+        },
+    )
+
+    assert response.status_code == 422
+    
+
+def test_get_engineering_change_actions_after_creation(
+    client,
+    db_session,
+):
+    create_response = client.post(
+        "/api/v1/engineering-changes",
+        json={
+            "title": "Action retrieval API test",
+            "description": "Testing action retrieval after creation.",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    change_id = create_response.json()["id"]
+
+    node = ContextNode(
+        id=uuid4(),
+        site_id="TEST-SITE",
+        type=ContextNodeType.COMPONENT,
+        identifier="TEST-RETRIEVE-ACTION",
+        name="Test Component",
+    )
+
+    db_session.add(node)
+    db_session.commit()
+    db_session.refresh(node)
+
+    create_action_response = client.post(
+        f"/api/v1/engineering-changes/{change_id}/actions",
+        json={
+            "node_id": str(node.id),
+            "action": "MODIFY",
+            "proposed_state": {
+                "status": "updated",
+            },
+        },
+    )
+
+    assert create_action_response.status_code == 201
+
+    created_action = create_action_response.json()
+
+    response = client.get(
+        f"/api/v1/engineering-changes/{change_id}/actions"
+    )
+
+    assert response.status_code == 200
+
+    actions = response.json()
+
+    assert len(actions) == 1
+    assert actions[0]["id"] == created_action["id"]
+    assert actions[0]["node_id"] == str(node.id)
+    assert actions[0]["action"] == "MODIFY"
+    assert actions[0]["proposed_state"] == {
+        "status": "updated",
+    }
+    
+
