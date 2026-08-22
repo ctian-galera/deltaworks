@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from fastapi.testclient import TestClient
+import pytest
 
 from app.main import app
 from app.services.engineering_context_report import create_context_report
@@ -453,3 +453,117 @@ def test_evaluate_nonexistent_change(client):
     )
 
     assert response.status_code in (200, 404)
+    
+
+def test_generate_engineering_change_approvals(client):
+    create_response = client.post(
+        "/api/v1/engineering-changes",
+        json={
+            "title": "Approval generation API test",
+            "description": "Testing approval generation through the API.",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    change_id = create_response.json()["id"]
+
+    response = client.post(
+        f"/api/v1/engineering-changes/{change_id}/approvals/generate"
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert isinstance(data, list)
+
+
+def test_get_engineering_change_approvals(client):
+    create_response = client.post(
+        "/api/v1/engineering-changes",
+        json={
+            "title": "Approval retrieval API test",
+            "description": "Testing approval retrieval through the API.",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    change_id = create_response.json()["id"]
+
+    response = client.get(
+        f"/api/v1/engineering-changes/{change_id}/approvals"
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert isinstance(data, list)
+
+
+def test_decide_engineering_change_approval(client):
+    create_response = client.post(
+        "/api/v1/engineering-changes",
+        json={
+            "title": "Approval decision API test",
+            "description": "Testing approval decisions through the API.",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    change_id = create_response.json()["id"]
+
+    generate_response = client.post(
+        f"/api/v1/engineering-changes/{change_id}/approvals/generate"
+    )
+
+    assert generate_response.status_code == 200
+
+    approvals = generate_response.json()
+
+    if not approvals:
+        pytest.skip("No approval requirements generated for this ECR")
+
+    approval_id = approvals[0]["id"]
+
+    response = client.post(
+        f"/api/v1/engineering-changes/{change_id}/approvals/{approval_id}/decision",
+        json={
+            "status": "APPROVED",
+            "actor": "test-user",
+        },
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["id"] == approval_id
+    assert data["status"] == "APPROVED"
+
+
+def test_decide_nonexistent_approval(client):
+    create_response = client.post(
+        "/api/v1/engineering-changes",
+        json={
+            "title": "Invalid approval API test",
+            "description": "Testing invalid approval decisions.",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    change_id = create_response.json()["id"]
+
+    response = client.post(
+        f"/api/v1/engineering-changes/{change_id}/approvals/00000000-0000-0000-0000-000000000000/decision",
+        json={
+            "status": "APPROVED",
+            "actor": "test-user",
+        },
+    )
+
+    assert response.status_code in (404, 409)
