@@ -3,129 +3,12 @@
   "nodes": [
     {
       "parameters": {
-        "httpMethod": "POST",
-        "path": "deltaworks/ecr-events",
-        "responseMode": "responseNode",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2.1,
-      "position": [
-        -272,
-        -96
-      ],
-      "id": "752b86f4-2156-4206-b2c9-7fd2a6858240",
-      "name": "Webhook",
-      "webhookId": "b01c9d32-1b3c-4bec-96e6-d15dad278aa5"
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={\n  \"id\": \"{{$json.id}}\",\n  \"change_number\": \"{{$json.change_number}}\",\n  \"title\": \"{{$json.title}}\",\n  \"status\": \"{{$json.status}}\"\n}",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.5,
-      "position": [
-        1904,
-        -96
-      ],
-      "id": "2336f667-5673-4ab9-9622-4ca6047a51ab",
-      "name": "Respond to Webhook"
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "4439f734-b26e-4ecd-b0bc-26811f986604",
-              "name": "message",
-              "value": "=ECR {{$json.body.change_number}} changed to {{$json.body.new_status}}",
-              "type": "string"
-            },
-            {
-              "id": "32dd0ce2-4be7-4e7a-8cb0-d0fed1153083",
-              "name": "event_type",
-              "value": "={{$json.body.event}}",
-              "type": "string"
-            }
-          ]
-        },
-        "includeOtherFields": true,
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.5,
-      "position": [
-        -32,
-        -96
-      ],
-      "id": "e461ef50-a41d-493a-b519-5c555141bd8d",
-      "name": "Edit Fields"
-    },
-    {
-      "parameters": {
-        "url": "=http://host.docker.internal:8000/api/v1/engineering-changes/{{$json.body.change_id}}",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.5,
-      "position": [
-        192,
-        -96
-      ],
-      "id": "3c90877e-21af-41db-82bf-2efa452c5c60",
-      "name": "Get ECR"
-    },
-    {
-      "parameters": {
-        "url": "=http://host.docker.internal:8000/api/v1/engineering-changes/{{$json.id}}/risks",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.5,
-      "position": [
-        528,
-        32
-      ],
-      "id": "9b0532e8-181a-4491-98e0-c3b706b25460",
-      "name": "Get Risks"
-    },
-    {
-      "parameters": {
-        "jsCode": "const ecr = $('Get ECR').first().json;\nconst risks = $('Get Risks').all().map(item => item.json);\nconst approvals = $('Get Approvals').all().map(item => item.json);\n\nreturn [\n  {\n    json: {\n      ecr,\n      risks,\n      approvals,\n    },\n  },\n];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1024,
-        -112
-      ],
-      "id": "03e5a22c-4643-446d-ac2d-b531b7170868",
-      "name": "Build Engineering Context"
-    },
-    {
-      "parameters": {
-        "url": "=http://host.docker.internal:8000/api/v1/engineering-changes/{{$('Get ECR').first().json.id}}/approvals",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.5,
-      "position": [
-        528,
-        -224
-      ],
-      "id": "cb3a7305-5c09-4806-b6d1-f91b4c4ee1b2",
-      "name": "Get Approvals"
-    },
-    {
-      "parameters": {
         "options": {}
       },
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "typeVersion": 1.1,
       "position": [
-        1200,
+        912,
         112
       ],
       "id": "948be1dc-7f49-4d14-bd86-4f98d1fb2d87",
@@ -139,8 +22,122 @@
     },
     {
       "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"engineering_change_summary\": {\n      \"type\": \"object\",\n      \"properties\": {\n        \"change_number\": {\n          \"type\": \"string\"\n        },\n        \"title\": {\n          \"type\": \"string\"\n        },\n        \"status\": {\n          \"type\": \"string\"\n        },\n        \"description\": {\n          \"type\": \"string\"\n        }\n      },\n      \"required\": [\n        \"change_number\",\n        \"title\",\n        \"status\",\n        \"description\"\n      ]\n    },\n    \"critical_risks\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"category\": {\n            \"type\": \"string\"\n          },\n          \"severity\": {\n            \"type\": \"string\"\n          },\n          \"reason\": {\n            \"type\": \"string\"\n          }\n        },\n        \"required\": [\n          \"category\",\n          \"severity\",\n          \"reason\"\n        ]\n      }\n    },\n    \"warning_risks\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"category\": {\n            \"type\": \"string\"\n          },\n          \"severity\": {\n            \"type\": \"string\"\n          },\n          \"reason\": {\n            \"type\": \"string\"\n          }\n        },\n        \"required\": [\n          \"category\",\n          \"severity\",\n          \"reason\"\n        ]\n      }\n    },\n    \"required_approvals\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"role\": {\n            \"type\": \"string\"\n          },\n          \"status\": {\n            \"type\": \"string\"\n          }\n        },\n        \"required\": [\n          \"role\",\n          \"status\"\n        ]\n      }\n    },\n    \"reviewer_attention\": {\n      \"type\": \"string\"\n    }\n  },\n  \"required\": [\n    \"engineering_change_summary\",\n    \"critical_risks\",\n    \"warning_risks\",\n    \"required_approvals\",\n    \"reviewer_attention\"\n  ]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1168,
+        112
+      ],
+      "id": "560c7447-6f86-431d-8147-55728d5b3f68",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "url": "=http://host.docker.internal:8000/api/v1/engineering-changes/{{ $('Webhook - ECR Event').first().json.body.change_id }}/context-bundle",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        720,
+        -96
+      ],
+      "id": "b81bcf1a-1e92-471a-a0db-54bd167681f9",
+      "name": "Get Context Bundle"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"status\": \"accepted\",\n  \"message\": \"Engineering change event accepted for context analysis.\",\n  \"event_id\": \"{{ $('Webhook').first().json.body.event_id }}\",\n  \"engineering_change_id\": \"{{ $('Webhook').first().json.body.change_id }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        448,
+        -208
+      ],
+      "id": "58b6ecbb-a746-46db-9d5e-51cc5da987a6",
+      "name": "Respond -Accepted"
+    },
+    {
+      "parameters": {
+        "url": "=http://host.docker.internal:8000/api/v1/engineering-changes/{{ $json.body.change_id }}/context-reports/events/{{ $json.body.event_id }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -48,
+        -96
+      ],
+      "id": "ef029de9-c07d-4e2a-bc6c-ff68f61e242b",
+      "name": "Check Existing Context Report"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "8622a4c1-8d7b-4e39-bbf7-42facae5b2c1",
+              "leftValue": "={{ $json.statusCode }}",
+              "rightValue": "=404",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        176,
+        -96
+      ],
+      "id": "bcb7ad7b-e6db-4284-a48d-9662fa9e44b6",
+      "name": "Event Already Processed?"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"status\": \"already_processed\",\n  \"message\": \"This event has already generated a context report.\",\n  \"event_id\": \"{{ $('Webhook').first().json.body.event_id }}\",\n  \"engineering_change_id\": \"{{ $('Webhook').first().json.body.change_id }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        448,
+        16
+      ],
+      "id": "fdb79633-df4f-4951-a992-ea76a74d1a22",
+      "name": "Respond - Already Processed"
+    },
+    {
+      "parameters": {
         "promptType": "define",
-        "text": "=You are an engineering change management assistant.  Analyze the engineering change context provided below.  Your job is to produce a concise engineering review containing:  1. Engineering change summary 2. Critical risks 3. Warning risks 4. Required approvals and their current status 5. Reviewer attention / recommended next action  Use ONLY the information provided in the engineering change context. Do not invent risks, approvals, statuses, or technical facts.  Engineering Change Context: {{ JSON.stringify($json) }}",
+        "text": "=You are a Senior Industrial Automation Reviewer analyzing an Engineering Change Request (ECR) Context Bundle.\n\nYour objective is to synthesize the raw engineering data into a concise, executive-level Engineering Context Report for human reviewers.\n\nInstructions for Synthesis:\n\n1. Executive Summary\nProvide a clear, one-sentence description of the proposed engineering change and its current status.\n\n2. Consolidate Risks\nThe raw context may contain duplicate risk findings caused by multiple graph traversal paths.\nDeduplicate findings that refer to the same component/node, category, severity, and underlying reason.\nDo not remove genuinely distinct risks.\nGroup the resulting risks logically by severity and category.\n\n3. Required Approvals\nList the exact approval roles and their current statuses as provided in the context.\nDo not add, remove, or change approval roles.\n\n4. Reviewer Attention\nWrite a concise analytical paragraph explaining the significance of the identified risks and how they relate to the approval roles already specified in the context.\nDo not independently determine or validate which roles should be required.\n\nStrict Guardrails:\n\n- State facts as provided.\n- Use ONLY the nodes, components, risks, relationships, approval roles, and statuses present in the context.\n- Deduplicate repeated findings caused by graph traversal.\n- Do NOT invent risks, components, relationships, or technical facts.\n- Do NOT change risk severity.\n- Do NOT change approval status.\n- Do NOT determine whether the ECR is safe to execute.\n- Do NOT approve or reject the ECR.\n- You are a reporter and synthesizer, not the final engineering authority.\n- If the available context does not support a conclusion, state that the information is not provided rather than guessing.\n\nEngineering Change Context:\n{{ JSON.stringify($json) }}",
         "hasOutputParser": true,
         "messages": {
           "messageValues": []
@@ -150,128 +147,58 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.9,
       "position": [
-        1248,
-        -112
+        976,
+        -96
       ],
       "id": "ed7feb85-44e0-4324-bfe4-a9b4fcae03d3",
-      "name": "Basic LLM Chain"
+      "name": " Generate Context Report"
     },
     {
       "parameters": {
-        "schemaType": "manual",
-        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"engineering_change_summary\": {\n      \"type\": \"object\",\n      \"properties\": {\n        \"change_number\": {\n          \"type\": \"string\"\n        },\n        \"title\": {\n          \"type\": \"string\"\n        },\n        \"status\": {\n          \"type\": \"string\"\n        },\n        \"description\": {\n          \"type\": \"string\"\n        }\n      },\n      \"required\": [\n        \"change_number\",\n        \"title\",\n        \"status\",\n        \"description\"\n      ]\n    },\n    \"critical_risks\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"category\": {\n            \"type\": \"string\"\n          },\n          \"severity\": {\n            \"type\": \"string\"\n          },\n          \"reason\": {\n            \"type\": \"string\"\n          }\n        },\n        \"required\": [\n          \"category\",\n          \"severity\",\n          \"reason\"\n        ]\n      }\n    },\n    \"warning_risks\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"category\": {\n            \"type\": \"string\"\n          },\n          \"severity\": {\n            \"type\": \"string\"\n          },\n          \"reason\": {\n            \"type\": \"string\"\n          }\n        },\n        \"required\": [\n          \"category\",\n          \"severity\",\n          \"reason\"\n        ]\n      }\n    },\n    \"required_approvals\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"role\": {\n            \"type\": \"string\"\n          },\n          \"status\": {\n            \"type\": \"string\"\n          }\n        },\n        \"required\": [\n          \"role\",\n          \"status\"\n        ]\n      }\n    },\n    \"reviewer_attention\": {\n      \"type\": \"string\"\n    }\n  },\n  \"required\": [\n    \"engineering_change_summary\",\n    \"critical_risks\",\n    \"warning_risks\",\n    \"required_approvals\",\n    \"reviewer_attention\"\n  ]\n}"
+        "method": "POST",
+        "url": "=http://host.docker.internal:8000/api/v1/engineering-changes/{{ $('Webhook - ECR Event').first().json.body.change_id }}/context-reports",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"event_id\": \"{{ $('Webhook - ECR Event').first().json.body.event_id }}\",\n  \"model\": \"gemini-3-flash-preview\",\n  \"prompt_version\": \"v1\",\n  \"input_context\": {{ JSON.stringify($('Get Context Bundle').first().json) }},\n  \"report\": {{ JSON.stringify($json.output) }}\n}",
+        "options": {}
       },
-      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
-      "typeVersion": 1.3,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
       "position": [
-        1456,
-        112
+        1424,
+        -96
       ],
-      "id": "560c7447-6f86-431d-8147-55728d5b3f68",
-      "name": "Structured Output Parser"
+      "id": "600d814f-83f8-4dec-a78c-3c468d3490ac",
+      "name": "Save Context Report"
     },
     {
-      "parameters": {},
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 3.2,
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "deltaworks/ecr-events",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
       "position": [
-        832,
-        -112
+        -272,
+        -96
       ],
-      "id": "3fbfda41-e7db-4c68-9125-c78677acdf5e",
-      "name": "Merge"
+      "id": "752b86f4-2156-4206-b2c9-7fd2a6858240",
+      "name": "Webhook - ECR Event",
+      "webhookId": "b01c9d32-1b3c-4bec-96e6-d15dad278aa5"
     }
   ],
   "pinData": {},
   "connections": {
-    "Webhook": {
-      "main": [
-        [
-          {
-            "node": "Edit Fields",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Edit Fields": {
-      "main": [
-        [
-          {
-            "node": "Get ECR",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Get ECR": {
-      "main": [
-        [
-          {
-            "node": "Get Approvals",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Get Risks",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Get Risks": {
-      "main": [
-        [
-          {
-            "node": "Merge",
-            "type": "main",
-            "index": 1
-          }
-        ]
-      ]
-    },
-    "Build Engineering Context": {
-      "main": [
-        [
-          {
-            "node": "Basic LLM Chain",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Get Approvals": {
-      "main": [
-        [
-          {
-            "node": "Merge",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Google Gemini Chat Model": {
       "ai_languageModel": [
         [
           {
-            "node": "Basic LLM Chain",
+            "node": " Generate Context Report",
             "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Basic LLM Chain": {
-      "main": [
-        [
-          {
-            "node": "Respond to Webhook",
-            "type": "main",
             "index": 0
           }
         ]
@@ -281,18 +208,90 @@
       "ai_outputParser": [
         [
           {
-            "node": "Basic LLM Chain",
+            "node": " Generate Context Report",
             "type": "ai_outputParser",
             "index": 0
           }
         ]
       ]
     },
-    "Merge": {
+    "Get Context Bundle": {
       "main": [
         [
           {
-            "node": "Build Engineering Context",
+            "node": " Generate Context Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond -Accepted": {
+      "main": [
+        [
+          {
+            "node": "Get Context Bundle",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Existing Context Report": {
+      "main": [
+        [
+          {
+            "node": "Event Already Processed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Event Already Processed?": {
+      "main": [
+        [
+          {
+            "node": "Respond -Accepted",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond - Already Processed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond - Already Processed": {
+      "main": [
+        []
+      ]
+    },
+    " Generate Context Report": {
+      "main": [
+        [
+          {
+            "node": "Save Context Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Context Report": {
+      "main": [
+        []
+      ]
+    },
+    "Webhook - ECR Event": {
+      "main": [
+        [
+          {
+            "node": "Check Existing Context Report",
             "type": "main",
             "index": 0
           }
@@ -306,7 +305,7 @@
     "binaryMode": "separate",
     "availableInMCP": false
   },
-  "versionId": "1f2aefc7-f9dc-4968-8473-265d4c63f8a4",
+  "versionId": "f22d9268-0546-4554-a2d2-264565c379fe",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "c2053f22f09f44a13e65cf76d48ef166848c7b430b12fedaf142ee39f7acf430"

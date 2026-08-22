@@ -16,6 +16,13 @@ class EngineeringContextReport(Base):
         primary_key=True,
         default=uuid.uuid4,
     )
+    
+    event_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
 
     engineering_change_id: Mapped[int] = mapped_column(
         ForeignKey("engineering_changes.id"),

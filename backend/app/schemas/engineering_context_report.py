@@ -5,6 +5,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class EngineeringContextReportCreate(BaseModel):
+    event_id: UUID
+
     model: str = Field(
         min_length=1,
         max_length=100,
@@ -26,6 +28,7 @@ class EngineeringContextReportResponse(BaseModel):
     )
 
     id: UUID
+    event_id: UUID
     engineering_change_id: int
     model: str
     prompt_version: str

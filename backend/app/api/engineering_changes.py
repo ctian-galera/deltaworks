@@ -53,6 +53,8 @@ from app.schemas.engineering_context_report import (
 from app.services.engineering_context_report import (
     create_context_report,
     get_context_reports,
+    get_context_report_by_event_id,
+    get_report_by_event,
 )
 
 
@@ -332,6 +334,14 @@ def create_engineering_context_report(
         db,
     )
 
+    existing_report = get_context_report_by_event_id(
+        db,
+        data.event_id,
+    )
+
+    if existing_report is not None:
+        return existing_report
+
     return create_context_report(
         db,
         engineering_change_id,
@@ -356,3 +366,32 @@ def get_engineering_context_reports(
         db,
         engineering_change_id,
     )
+
+
+@router.get(
+    "/{engineering_change_id}/context-reports/events/{event_id}",
+    response_model=EngineeringContextReportResponse,
+)
+def get_engineering_context_report_by_event(
+    engineering_change_id: int,
+    event_id: UUID,
+    db: Session = Depends(get_db),
+):
+    get_change_or_404(
+        engineering_change_id,
+        db,
+    )
+
+    report = get_report_by_event(
+        db,
+        engineering_change_id,
+        event_id,
+    )
+
+    if report is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Context report not found for this event",
+        )
+
+    return report
