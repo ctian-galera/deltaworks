@@ -101,3 +101,118 @@ def test_get_context_report_unknown_engineering_change(db_session, client):
     )
 
     assert response.status_code == 404
+    
+    
+
+def test_create_engineering_change(client):
+    response = client.post(
+        "/api/v1/engineering-changes",
+        json={
+            "title": "API test engineering change",
+            "description": "Testing ECR creation through the API.",
+        },
+    )
+
+    assert response.status_code == 201
+
+    data = response.json()
+
+    assert data["id"] is not None
+    assert data["change_number"].startswith("ECR-")
+    assert data["title"] == "API test engineering change"
+    assert data["description"] == "Testing ECR creation through the API."
+    assert data["status"] == "DRAFT"
+
+
+def test_get_engineering_change(client):
+    create_response = client.post(
+        "/api/v1/engineering-changes",
+        json={
+            "title": "Get API test",
+            "description": "Testing ECR retrieval.",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    created = create_response.json()
+    change_id = created["id"]
+
+    response = client.get(
+        f"/api/v1/engineering-changes/{change_id}"
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["id"] == change_id
+    assert data["change_number"] == created["change_number"]
+    assert data["title"] == "Get API test"
+    assert data["description"] == "Testing ECR retrieval."
+    assert data["status"] == "DRAFT"
+
+
+def test_get_engineering_change_not_found(client):
+    response = client.get(
+        "/api/v1/engineering-changes/999999"
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Engineering change not found"
+
+
+def test_submit_engineering_change(client):
+    create_response = client.post(
+        "/api/v1/engineering-changes",
+        json={
+            "change_number": "ECR-API-TEST-003",
+            "title": "Submit API test",
+            "description": "Testing ECR submission.",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    change_id = create_response.json()["id"]
+
+    response = client.post(
+        f"/api/v1/engineering-changes/{change_id}/submit"
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["id"] == change_id
+    assert data["status"] == "SUBMITTED"
+
+
+def test_submit_engineering_change_invalid_transition(client):
+    create_response = client.post(
+        "/api/v1/engineering-changes",
+        json={
+            "change_number": "ECR-API-TEST-004",
+            "title": "Invalid transition test",
+            "description": "Testing invalid ECR submission.",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    change_id = create_response.json()["id"]
+
+    # First submission is valid.
+    first_response = client.post(
+        f"/api/v1/engineering-changes/{change_id}/submit"
+    )
+
+    assert first_response.status_code == 200
+    assert first_response.json()["status"] == "SUBMITTED"
+
+    # Submitting an already-submitted ECR should fail.
+    second_response = client.post(
+        f"/api/v1/engineering-changes/{change_id}/submit"
+    )
+
+    assert second_response.status_code == 409
