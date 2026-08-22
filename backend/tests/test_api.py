@@ -725,3 +725,74 @@ def test_create_action_when_change_is_not_draft(client, db_session):
     assert response.status_code == 409
     
     
+    
+def test_get_engineering_change_context_bundle(client):
+    create_response = client.post(
+        "/api/v1/engineering-changes",
+        json={
+            "title": "Context bundle API test",
+            "description": "Testing context bundle retrieval.",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    change_id = create_response.json()["id"]
+
+    response = client.get(
+        f"/api/v1/engineering-changes/{change_id}/context-bundle"
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert "ecr" in data
+    assert "risks" in data
+    assert "approvals" in data
+
+    assert data["ecr"]["id"] == change_id
+    assert isinstance(data["risks"], list)
+    assert isinstance(data["approvals"], list)
+
+
+def test_get_context_bundle_for_nonexistent_change(client):
+    response = client.get(
+        "/api/v1/engineering-changes/999999/context-bundle"
+    )
+
+    assert response.status_code == 404
+
+
+def test_get_engineering_change_risks(client):
+    create_response = client.post(
+        "/api/v1/engineering-changes",
+        json={
+            "title": "Risks API test",
+            "description": "Testing risk retrieval.",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    change_id = create_response.json()["id"]
+
+    response = client.get(
+        f"/api/v1/engineering-changes/{change_id}/risks"
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert isinstance(data, list)
+
+
+def test_get_risks_for_nonexistent_change(client):
+    response = client.get(
+        "/api/v1/engineering-changes/999999/risks"
+    )
+
+    assert response.status_code == 200
+
+    assert response.json() == []
