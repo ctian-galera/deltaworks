@@ -1,6 +1,6 @@
 from sqlalchemy import text
 
-from app.db.session import engine, SessionLocal
+from app.db.session import engine
 from app.models.engineering_change import (
     ChangeStatus,
     EngineeringChange,
