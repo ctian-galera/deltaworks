@@ -796,3 +796,168 @@ def test_get_risks_for_nonexistent_change(client):
     assert response.status_code == 200
 
     assert response.json() == []
+    
+
+def test_generate_engineering_change_approvals(client):
+    create_response = client.post(
+        "/api/v1/engineering-changes",
+        json={
+            "title": "Approval generation API test",
+            "description": "Testing approval generation through the API.",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    change_id = create_response.json()["id"]
+
+    response = client.post(
+        f"/api/v1/engineering-changes/{change_id}/approvals/generate"
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert isinstance(data, list)
+
+
+def test_generate_approvals_for_nonexistent_change(client):
+    response = client.post(
+        "/api/v1/engineering-changes/999999/approvals/generate"
+    )
+
+    assert response.status_code == 404
+
+
+def test_get_engineering_change_approvals(client):
+    create_response = client.post(
+        "/api/v1/engineering-changes",
+        json={
+            "title": "Approval retrieval API test",
+            "description": "Testing approval retrieval through the API.",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    change_id = create_response.json()["id"]
+
+    generate_response = client.post(
+        f"/api/v1/engineering-changes/{change_id}/approvals/generate"
+    )
+
+    assert generate_response.status_code == 200
+
+    response = client.get(
+        f"/api/v1/engineering-changes/{change_id}/approvals"
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert isinstance(data, list)
+
+
+def test_get_approvals_for_nonexistent_change(client):
+    response = client.get(
+        "/api/v1/engineering-changes/999999/approvals"
+    )
+
+    assert response.status_code == 404
+    
+
+
+def test_transition_engineering_change(client):
+    create_response = client.post(
+        "/api/v1/engineering-changes",
+        json={
+            "title": "Generic transition API test",
+            "description": "Testing generic ECR transition.",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    change_id = create_response.json()["id"]
+
+    response = client.post(
+        f"/api/v1/engineering-changes/{change_id}/transition",
+        json={
+            "target_status": "SUBMITTED",
+            "actor": "test-user",
+            "reason": "Submitting for engineering review.",
+        },
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["id"] == change_id
+    assert data["status"] == "SUBMITTED"
+    
+    
+def test_transition_engineering_change_invalid_transition(client):
+    create_response = client.post(
+        "/api/v1/engineering-changes",
+        json={
+            "title": "Invalid generic transition API test",
+            "description": "Testing invalid generic transition.",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    change_id = create_response.json()["id"]
+
+    response = client.post(
+        f"/api/v1/engineering-changes/{change_id}/transition",
+        json={
+            "target_status": "APPROVED",
+            "actor": "test-user",
+            "reason": "Attempting invalid transition.",
+        },
+    )
+
+    assert response.status_code == 409
+    
+
+
+def test_transition_nonexistent_engineering_change(client):
+    response = client.post(
+        "/api/v1/engineering-changes/999999/transition",
+        json={
+            "target_status": "SUBMITTED",
+            "actor": "test-user",
+            "reason": "Testing nonexistent ECR.",
+        },
+    )
+
+    assert response.status_code == 404
+    
+    
+def test_transition_engineering_change_invalid_body(client):
+    create_response = client.post(
+        "/api/v1/engineering-changes",
+        json={
+            "title": "Transition validation API test",
+            "description": "Testing invalid transition payload.",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    change_id = create_response.json()["id"]
+
+    response = client.post(
+        f"/api/v1/engineering-changes/{change_id}/transition",
+        json={
+            "target_status": "NOT_A_REAL_STATUS",
+        },
+    )
+
+    assert response.status_code == 422
+    
+    
