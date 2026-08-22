@@ -216,3 +216,141 @@ def test_submit_engineering_change_invalid_transition(client):
     )
 
     assert second_response.status_code == 409
+    
+    
+def test_create_context_report(client):
+    # Create an ECR first.
+    change_response = client.post(
+        "/api/v1/engineering-changes",
+        json={
+            "title": "Context report API test",
+            "description": "Testing context report creation.",
+        },
+    )
+
+    assert change_response.status_code == 201
+
+    change_id = change_response.json()["id"]
+
+    event_id = "11111111-1111-1111-1111-111111111111"
+
+    response = client.post(
+        f"/api/v1/engineering-changes/{change_id}/context-reports",
+        json={
+            "event_id": event_id,
+            "model": "test-model",
+            "prompt_version": "v1",
+            "input_context": {
+                "ecr": {
+                    "id": change_id,
+                },
+                "risks": [],
+                "approvals": [],
+            },
+            "report": {
+                "engineering_change_summary": {
+                    "title": "Context report API test",
+                    "status": "DRAFT",
+                    "change_number": "ECR-2026-TEST",
+                    "description": "Test report.",
+                },
+                "critical_risks": [],
+                "warning_risks": [],
+                "required_approvals": [],
+                "reviewer_attention": "Test.",
+            },
+        },
+    )
+
+    assert response.status_code == 201
+
+    data = response.json()
+
+    assert data["event_id"] == event_id
+    assert data["engineering_change_id"] == change_id
+    assert data["model"] == "test-model"
+    assert data["prompt_version"] == "v1"
+    assert data["report"]["reviewer_attention"] == "Test."
+    
+
+def test_create_context_report_is_idempotent(client):
+    # Create an ECR.
+    change_response = client.post(
+        "/api/v1/engineering-changes",
+        json={
+            "title": "Idempotency API test",
+            "description": "Testing duplicate event handling.",
+        },
+    )
+
+    assert change_response.status_code == 201
+
+    change_id = change_response.json()["id"]
+
+    event_id = "22222222-2222-2222-2222-222222222222"
+
+    payload = {
+        "event_id": event_id,
+        "model": "test-model",
+        "prompt_version": "v1",
+        "input_context": {
+            "ecr": {
+                "id": change_id,
+            },
+            "risks": [],
+            "approvals": [],
+        },
+        "report": {
+            "engineering_change_summary": {
+                "title": "Idempotency API test",
+                "status": "DRAFT",
+                "change_number": "ECR-2026-TEST",
+                "description": "Test report.",
+            },
+            "critical_risks": [],
+            "warning_risks": [],
+            "required_approvals": [],
+            "reviewer_attention": "Original report.",
+        },
+    }
+
+    # First event: should create the report.
+    first_response = client.post(
+        f"/api/v1/engineering-changes/{change_id}/context-reports",
+        json=payload,
+    )
+
+    assert first_response.status_code == 201
+
+    first_data = first_response.json()
+
+    # Same event again: should NOT create another report.
+    duplicate_response = client.post(
+        f"/api/v1/engineering-changes/{change_id}/context-reports",
+        json=payload,
+    )
+
+    assert duplicate_response.status_code == 201
+
+    duplicate_data = duplicate_response.json()
+
+    # It should return the ORIGINAL report.
+    assert duplicate_data["id"] == first_data["id"]
+    assert duplicate_data["event_id"] == first_data["event_id"]
+    assert duplicate_data["created_at"] == first_data["created_at"]
+
+    # Most importantly, the original report remains unchanged.
+    assert duplicate_data["report"]["reviewer_attention"] == "Original report."
+
+    # Verify the API only has one report for this ECR.
+    reports_response = client.get(
+        f"/api/v1/engineering-changes/{change_id}/context-reports"
+    )
+
+    assert reports_response.status_code == 200
+
+    reports = reports_response.json()
+
+    assert len(reports) == 1
+    assert reports[0]["id"] == first_data["id"]
+    
