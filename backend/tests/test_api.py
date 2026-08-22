@@ -7,6 +7,8 @@ from app.services.engineering_context_report import create_context_report
 from app.schemas.engineering_context_report import EngineeringContextReportCreate
 from app.models.engineering_change import EngineeringChange
 
+from app.models.context_node import ContextNode, ContextNodeType
+
 
 def create_test_engineering_change(db_session):
     change = EngineeringChange(
@@ -567,3 +569,159 @@ def test_decide_nonexistent_approval(client):
     )
 
     assert response.status_code in (404, 409)
+    
+
+
+def test_create_engineering_change_action(client, db_session):
+    create_response = client.post(
+        "/api/v1/engineering-changes",
+        json={
+            "title": "Change action API test",
+            "description": "Testing change action creation through the API.",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    change_id = create_response.json()["id"]
+
+    node = ContextNode(
+        id=uuid4(),
+        site_id="TEST-SITE",
+        type=ContextNodeType.COMPONENT,
+        identifier="TEST-001",
+        name="Test Component",
+    )
+
+    db_session.add(node)
+    db_session.commit()
+    db_session.refresh(node)
+
+    response = client.post(
+        f"/api/v1/engineering-changes/{change_id}/actions",
+        json={
+            "node_id": str(node.id),
+            "action": "MODIFY",
+            "proposed_state": {
+                "status": "updated",
+            },
+        },
+    )
+
+    assert response.status_code == 201
+
+    data = response.json()
+
+    assert data["engineering_change_id"] == change_id
+    assert data["node_id"] == str(node.id)
+    assert data["action"] == "MODIFY"
+    assert data["proposed_state"] == {
+        "status": "updated",
+    }
+    
+
+def test_get_engineering_change_actions(client):
+    create_response = client.post(
+        "/api/v1/engineering-changes",
+        json={
+            "title": "Get actions API test",
+            "description": "Testing change action retrieval.",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    change_id = create_response.json()["id"]
+
+    response = client.get(
+        f"/api/v1/engineering-changes/{change_id}/actions"
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert isinstance(data, list)
+
+
+def test_create_action_for_nonexistent_change(client, db_session):
+    node = ContextNode(
+        id=uuid4(),
+        site_id="TEST-SITE",
+        type=ContextNodeType.COMPONENT,
+        identifier="TEST-002",
+        name="Test Component",
+    )
+
+    db_session.add(node)
+    db_session.commit()
+    db_session.refresh(node)
+
+    response = client.post(
+        "/api/v1/engineering-changes/999999/actions",
+        json={
+            "node_id": str(node.id),
+            "action": "MODIFY",
+            "proposed_state": {
+                "status": "updated",
+            },
+        },
+    )
+
+    assert response.status_code == 404
+    
+
+def test_get_actions_for_nonexistent_change(client):
+    response = client.get(
+        "/api/v1/engineering-changes/999999/actions"
+    )
+
+    assert response.status_code == 404
+    
+
+
+def test_create_action_when_change_is_not_draft(client, db_session):
+    create_response = client.post(
+        "/api/v1/engineering-changes",
+        json={
+            "title": "Locked action API test",
+            "description": "Testing action rejection after submission.",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    change_id = create_response.json()["id"]
+
+    node = ContextNode(
+        id=uuid4(),
+        site_id="TEST-SITE",
+        type=ContextNodeType.COMPONENT,
+        identifier="TEST-003",
+        name="Test Component",
+    )
+
+    db_session.add(node)
+    db_session.commit()
+    db_session.refresh(node)
+
+    submit_response = client.post(
+        f"/api/v1/engineering-changes/{change_id}/submit"
+    )
+
+    assert submit_response.status_code == 200
+
+    response = client.post(
+        f"/api/v1/engineering-changes/{change_id}/actions",
+        json={
+            "node_id": str(node.id),
+            "action": "MODIFY",
+            "proposed_state": {
+                "status": "updated",
+            },
+        },
+    )
+
+    assert response.status_code == 409
+    
+    
