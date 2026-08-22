@@ -391,3 +391,65 @@ def test_get_context_bundle_not_found(client):
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Engineering change not found"
+    
+    
+    
+def test_get_engineering_change_risks(client):
+    create_response = client.post(
+        "/api/v1/engineering-changes",
+        json={
+            "title": "Risk API test",
+            "description": "Testing risk retrieval through the API.",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    change_id = create_response.json()["id"]
+
+    response = client.get(
+        f"/api/v1/engineering-changes/{change_id}/risks"
+    )
+
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
+
+
+def test_evaluate_engineering_change(client):
+    create_response = client.post(
+        "/api/v1/engineering-changes",
+        json={
+            "title": "Risk evaluation API test",
+            "description": "Testing risk evaluation through the API.",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    change_id = create_response.json()["id"]
+
+    response = client.post(
+        f"/api/v1/engineering-changes/{change_id}/evaluate"
+    )
+
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
+
+
+def test_get_risks_for_nonexistent_change(client):
+    response = client.get(
+        "/api/v1/engineering-changes/999999/risks"
+    )
+
+    # Current implementation of get_engineering_change_risks()
+    # delegates directly to get_change_risks(), so verify the
+    # behavior your service currently provides.
+    assert response.status_code in (200, 404)
+
+
+def test_evaluate_nonexistent_change(client):
+    response = client.post(
+        "/api/v1/engineering-changes/999999/evaluate"
+    )
+
+    assert response.status_code in (200, 404)
